@@ -143,112 +143,112 @@ if gazela:
         uspesna_pretraga = True
 
         tabela = soup.find('table', id="main_artikel_panel_maintable")
+        if tabela != None:
+            brendovi = []
+            for row in tabela.find_all('tr'):
+                if row.has_attr('class'):
+                    if "main_artikel_panel_tr_einspeiser" in row.attrs['class']:
+                        columns = row.find_all('td')
+                        for col in columns:
+                            if col.has_attr('colspan'):
+                                brend = col.find('span').text
+                                brendovi.append([brend])
+                    elif "main_artikel_panel_tr_artikel" in row.attrs['class']:
+                        if "artikel1" in row.attrs['row_type']:
+                            brendovi[-1].append({})
+                            status_i_cena = row.find_all('td')
+                            for col in status_i_cena:
+                                if col.has_attr('class'):
+                                    if 'tc_number' in col.attrs['class']:
+                                        sifre = col.find_all('a')
+                                        for a in sifre:
+                                            if a.has_attr('title'):
+                                                if a.attrs['title'].startswith("Sifra dobavljacevog artikla"):
+                                                    sifra_dobavljacevog_artikla = a.contents[0].text
+                                                    brendovi[-1][-1]["sifra dobavljacevog artikla"] = sifra_dobavljacevog_artikla
+                                                elif a.attrs['title'].startswith("Kataloski broj"):
+                                                    kataloski_broj_proizvodjaca = a.contents[0].text
+                                                    brendovi[-1][-1]["kataloski broj proizvodjaca"] = kataloski_broj_proizvodjaca
 
-        brendovi = []
-        for row in tabela.find_all('tr'):
-            if row.has_attr('class'):
-                if "main_artikel_panel_tr_einspeiser" in row.attrs['class']:
-                    columns = row.find_all('td')
-                    for col in columns:
-                        if col.has_attr('colspan'):
-                            brend = col.find('span').text
-                            brendovi.append([brend])
-                elif "main_artikel_panel_tr_artikel" in row.attrs['class']:
-                    if "artikel1" in row.attrs['row_type']:
-                        brendovi[-1].append({})
-                        status_i_cena = row.find_all('td')
-                        for col in status_i_cena:
-                            if col.has_attr('class'):
-                                if 'tc_number' in col.attrs['class']:
-                                    sifre = col.find_all('a')
-                                    for a in sifre:
-                                        if a.has_attr('title'):
-                                            if a.attrs['title'].startswith("Sifra dobavljacevog artikla"):
-                                                sifra_dobavljacevog_artikla = a.contents[0].text
-                                                brendovi[-1][-1]["sifra dobavljacevog artikla"] = sifra_dobavljacevog_artikla
-                                            elif a.attrs['title'].startswith("Kataloski broj"):
-                                                kataloski_broj_proizvodjaca = a.contents[0].text
-                                                brendovi[-1][-1]["kataloski broj proizvodjaca"] = kataloski_broj_proizvodjaca
+            cene = driver.find_elements_by_tag_name('img')
+            # sve_cene = []
+            for cena in cene:
+                title = cena.get_attribute('title')
+                if title.startswith('Pitanje o trenutnim kolicinama/ceni'):
+                    # sve_cene.append(cena)
+                    if cena.is_displayed():
+                        modal_ok = False
+                        while not modal_ok:
+                            driver.execute_script("arguments[0].click();", cena)
+                            time.sleep(2)
+                            driver.switch_to.frame(driver.find_elements_by_class_name("cboxIframe")[0])
+                            time.sleep(1)
+                            master = driver.find_elements_by_id("masterpane")[0]
+                            html_text = master.text
+                            html_cena = master.text.split('\n')
 
-        cene = driver.find_elements_by_tag_name('img')
-        # sve_cene = []
-        for cena in cene:
-            title = cena.get_attribute('title')
-            if title.startswith('Pitanje o trenutnim kolicinama/ceni'):
-                # sve_cene.append(cena)
-                if cena.is_displayed():
-                    modal_ok = False
-                    while not modal_ok:
-                        driver.execute_script("arguments[0].click();", cena)
-                        time.sleep(2)
-                        driver.switch_to.frame(driver.find_elements_by_class_name("cboxIframe")[0])
+
+                            if not html_text.startswith("Prilikom obrade pitanja je nastala greska"):
+                                modal_ok = True
+                            if not modal_ok:
+                                driver.switch_to.default_content()
+                                time.sleep(1)
+                                driver.switch_to.frame(driver.find_element_by_id("Main_iframe1"))
+                                time.sleep(1)
+                                element = driver.find_element_by_id('cboxClose')
+                                driver.execute_script("arguments[0].click();", element)
+                                time.sleep(1)
+
+                        if len(html_cena) > 11:
+                            artikal_pretraga = html_cena[0]
+                            stanje = html_cena[3]
+                            if stanje.startswith("Dostupno"):
+                                stanje = "IMA"
+                            elif stanje.startswith("Nije dostupno"):
+                                stanje = "NEMA"
+                            else:
+                                stanje = "NEPOZNATO"
+                            for index, i in enumerate(html_cena):
+                                if i.startswith('VP Cena') and not i.startswith('VP cena sa popustom'):
+                                    vp_cena = i
+                                elif i.startswith('Magacin'):
+                                    lokacije = html_cena[index + 1:]
+                            # vp_cena = html_cena[11]
+                            # lokacije = html_cena[17:]
+                            lokacije_ima = []
+                            for location in lokacije:
+                                loc, state = location.split()
+                                if state == "Ima":
+                                    lokacije_ima.append(loc)
+                            for brend in brendovi:
+                                for num, a in enumerate(brend):
+                                    if num > 0:
+                                        try:
+                                            if a['sifra dobavljacevog artikla'] == artikal_pretraga:
+                                                a["vp cena"] = vp_cena
+                                                a["na stanju"] = stanje
+                                                a["lokacije"] = lokacije_ima
+                                                print artikal_pretraga
+                                                # if CUVAJ_SVE:
+                                                #     if not os.path.exists("rezultati"):
+                                                #         os.makedirs("rezultati")
+                                                #     ime_fajla = artikal + "-" + brend[0] + "-" + a["kataloski broj proizvodjaca"]
+                                                #     for ch in ['&', '#', '/', '\\', '<', '>', '"', '?', "'", ':', ';', '|', '*', '!', ' ']:
+                                                #         if ch in ime_fajla:
+                                                #             ime_fajla = ime_fajla.replace(ch, "")
+                                                #     temp = open("rezultati\\" + ime_fajla + ".txt", 'w')
+                                                #     temp.write(html_text)
+                                                #     temp.close()
+                                        except KeyError:
+                                            pass
+
+                        driver.switch_to.default_content()
                         time.sleep(1)
-                        master = driver.find_elements_by_id("masterpane")[0]
-                        html_text = master.text
-                        html_cena = master.text.split('\n')
-
-
-                        if not html_text.startswith("Prilikom obrade pitanja je nastala greska"):
-                            modal_ok = True
-                        if not modal_ok:
-                            driver.switch_to.default_content()
-                            time.sleep(1)
-                            driver.switch_to.frame(driver.find_element_by_id("Main_iframe1"))
-                            time.sleep(1)
-                            element = driver.find_element_by_id('cboxClose')
-                            driver.execute_script("arguments[0].click();", element)
-                            time.sleep(1)
-
-                    if len(html_cena) > 11:
-                        artikal_pretraga = html_cena[0]
-                        stanje = html_cena[3]
-                        if stanje.startswith("Dostupno"):
-                            stanje = "IMA"
-                        elif stanje.startswith("Nije dostupno"):
-                            stanje = "NEMA"
-                        else:
-                            stanje = "NEPOZNATO"
-                        for index, i in enumerate(html_cena):
-                            if i.startswith('VP Cena') and not i.startswith('VP cena sa popustom'):
-                                vp_cena = i
-                            elif i.startswith('Magacin'):
-                                lokacije = html_cena[index + 1:]
-                        # vp_cena = html_cena[11]
-                        # lokacije = html_cena[17:]
-                        lokacije_ima = []
-                        for location in lokacije:
-                            loc, state = location.split()
-                            if state == "Ima":
-                                lokacije_ima.append(loc)
-                        for brend in brendovi:
-                            for num, a in enumerate(brend):
-                                if num > 0:
-                                    try:
-                                        if a['sifra dobavljacevog artikla'] == artikal_pretraga:
-                                            a["vp cena"] = vp_cena
-                                            a["na stanju"] = stanje
-                                            a["lokacije"] = lokacije_ima
-                                            print artikal_pretraga
-                                            # if CUVAJ_SVE:
-                                            #     if not os.path.exists("rezultati"):
-                                            #         os.makedirs("rezultati")
-                                            #     ime_fajla = artikal + "-" + brend[0] + "-" + a["kataloski broj proizvodjaca"]
-                                            #     for ch in ['&', '#', '/', '\\', '<', '>', '"', '?', "'", ':', ';', '|', '*', '!', ' ']:
-                                            #         if ch in ime_fajla:
-                                            #             ime_fajla = ime_fajla.replace(ch, "")
-                                            #     temp = open("rezultati\\" + ime_fajla + ".txt", 'w')
-                                            #     temp.write(html_text)
-                                            #     temp.close()
-                                    except KeyError:
-                                        pass
-
-                    driver.switch_to.default_content()
-                    time.sleep(1)
-                    driver.switch_to.frame(driver.find_element_by_id("Main_iframe1"))
-                    time.sleep(1)
-                    element = driver.find_element_by_id('cboxClose')
-                    driver.execute_script("arguments[0].click();", element)
-                    time.sleep(1)
+                        driver.switch_to.frame(driver.find_element_by_id("Main_iframe1"))
+                        time.sleep(1)
+                        element = driver.find_element_by_id('cboxClose')
+                        driver.execute_script("arguments[0].click();", element)
+                        time.sleep(1)
 
         worksheet = book['gazela']
         row_idx = worksheet.max_row + 2
@@ -258,37 +258,40 @@ if gazela:
         worksheet.cell(row=row_idx + 1, column=4).value = "HEAD3"
         worksheet.cell(row=row_idx + 1, column=5).value = "HEAD4"
         row_idx += 2
-        for brend in brendovi:
-            for num, i in enumerate(brend):
-                if num > 0:
-                    worksheet.cell(row=row_idx, column=2).value = brend[0]
-                    if 'kataloski broj proizvodjaca' in i:
-                        worksheet.cell(row=row_idx, column=3).value = i['kataloski broj proizvodjaca']
-                    else:
-                        worksheet.cell(row=row_idx, column=3).value = '---'
-                    if 'vp cena' in i:
-                        try:
-                            if i['vp cena'].startswith("VP Cena(Rasprodaja do isteka zaliha) "):
-                                vp_cena = i['vp cena'].split('VP Cena(Rasprodaja do isteka zaliha) ')[1].split(' RSD')[0]
-                            else:
-                                    vp_cena = i['vp cena'].split('VP Cena ')[1].split(' RSD')[0]
-                            if vp_cena[0].isdigit():
-                                vp_cena = float(vp_cena)
-                        except IndexError:
-                            vp_cena = i['vp cena']
-                        worksheet.cell(row=row_idx, column=4).value = vp_cena
-                    else:
-                        worksheet.cell(row=row_idx, column=4).value = '---'
-                    if 'na stanju' in i:
-                        worksheet.cell(row=row_idx, column=5).value = i['na stanju']
-                        if CUVAJ_SVE:
-                            if 'lokacije' in i:
-                                for pos, lokacija in enumerate(i['lokacije']):
-                                    worksheet.cell(row=row_idx, column=6 + pos).value = lokacija
-                    else:
-                        worksheet.cell(row=row_idx, column=5).value = '---'
-                    row_idx += 1
-
+        if tabela != None:
+            for brend in brendovi:
+                for num, i in enumerate(brend):
+                    if num > 0:
+                        worksheet.cell(row=row_idx, column=2).value = brend[0]
+                        if 'kataloski broj proizvodjaca' in i:
+                            worksheet.cell(row=row_idx, column=3).value = i['kataloski broj proizvodjaca']
+                        else:
+                            worksheet.cell(row=row_idx, column=3).value = '---'
+                        if 'vp cena' in i:
+                            try:
+                                if i['vp cena'].startswith("VP Cena(Rasprodaja do isteka zaliha) "):
+                                    vp_cena = i['vp cena'].split('VP Cena(Rasprodaja do isteka zaliha) ')[1].split(' RSD')[0]
+                                else:
+                                        vp_cena = i['vp cena'].split('VP Cena ')[1].split(' RSD')[0]
+                                if vp_cena[0].isdigit():
+                                    vp_cena = float(vp_cena)
+                            except IndexError:
+                                vp_cena = i['vp cena']
+                            worksheet.cell(row=row_idx, column=4).value = vp_cena
+                        else:
+                            worksheet.cell(row=row_idx, column=4).value = '---'
+                        if 'na stanju' in i:
+                            worksheet.cell(row=row_idx, column=5).value = i['na stanju']
+                            if CUVAJ_SVE:
+                                if 'lokacije' in i:
+                                    for pos, lokacija in enumerate(i['lokacije']):
+                                        worksheet.cell(row=row_idx, column=6 + pos).value = lokacija
+                        else:
+                            worksheet.cell(row=row_idx, column=5).value = '---'
+                        row_idx += 1
+        else:
+            worksheet.cell(row=row_idx, column=2).value = "Ne postoji ovaj artikal"
+            row_idx += 1
         book.save(XLSX_FILE_TEMP)
         if os.path.exists(XLSX_FILE):
             os.remove(XLSX_FILE)
