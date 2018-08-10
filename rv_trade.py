@@ -34,6 +34,10 @@ lozinka_gazela = "fiatino123"
 korisnik_wint = "autotigra"
 lozinka_wint = "tigra2167300"
 
+# korisnik za rv trade
+korisnik_rvtrade = "TESTRV1"
+lozinka_rvtrade = "RVadmin021"
+
 # #####################################################################################################################
 # #####################################################################################################################
 # #####################################################################################################################
@@ -41,14 +45,15 @@ lozinka_wint = "tigra2167300"
 param_error = """
 Pogresan broj parametara..
 Kako koristiti skriptu: rv_trade.py <textualni fajl sa spiskom artikala za pretragu> <sajt za pretragu 1> <sajt za pretragu 2> ...
-Moguci sajtovi: 'gazela', 'wint'
+Moguci sajtovi: 'gazela', 'wint', 'rvtrade'
 """
 STRING_PAUZA = str(PAUZA_IZMEDJU_PRETRAGA)
-MOGUCI_SAJTOVI = ['gazela', 'wint']
+MOGUCI_SAJTOVI = ['gazela', 'wint', 'rvtrade']
 
 # sajtovi
 gazela = False
 wint = False
+rvtrade = False
 # Artikli za pretragu
 artikli_za_pretragu = []
 
@@ -74,6 +79,8 @@ else:
                 gazela = True
             elif sajt == "wint":
                 wint = True
+            elif sajt == "rvtrade":
+                rvtrade = True
 
 # excel
 XLSX_FILE_TEMP = "rezultati_temp.xlsx"
@@ -474,5 +481,131 @@ if wint:
         if _artikal_ != artikli_za_pretragu[-1]:
             print "\nCekam {sekunde} sekundi".format(sekunde=STRING_PAUZA)
             time.sleep(PAUZA_IZMEDJU_PRETRAGA)
+    driver.quit()
+    print "\nUspesna pretraga!"
+
+
+if rvtrade:
+    # get the path of ChromeDriverServer
+    dir = os.path.dirname(__file__)
+    chrome_driver_path = "chromedriver.exe"
+
+    # create a new Chrome session
+    driver = webdriver.Chrome(chrome_driver_path)
+    driver.implicitly_wait(30)
+    # mora full screen , u suprotnom nece naci pretragu !!
+    driver.maximize_window()
+
+    driver.get("http://rvtrade.atit-solutions.eu/admin/login_login.php")
+    username = driver.find_element_by_name("email")
+    password = driver.find_element_by_name("password")
+
+    username.send_keys(korisnik_rvtrade)
+    password.send_keys(lozinka_rvtrade)
+
+    driver.find_element_by_class_name("click_button").click()
+
+
+    time.sleep(2)
+
+    for _artikal_ in artikli_za_pretragu:
+        print "Pretrazujem artikal '{0}'...\n".format(_artikal_)
+        artikli_pretrage = []
+        searchbox = driver.find_element_by_id("search_pattern")
+        searchbox.clear()
+        # unesi artikal za pretragu
+        searchbox.send_keys(_artikal_)
+        time.sleep(1)
+
+        driver.find_element_by_id("search_button_1").click()
+
+        time.sleep(5)
+
+        # tabela = driver.find_element_by_id("search_articles_table")
+        html = driver.page_source
+        # ucitavanje cele stranice
+        soup = BeautifulSoup(html, "lxml")
+        uspesna_pretraga = True
+
+        tabela = soup.find('table', id="search_articles_table")
+        if "Nema rezultata za pretragu" not in tabela.text:
+            head = tabela.find('thead')
+            body = tabela.find('tbody')
+            svi_artikli = body.find_all('tr')
+            for a in svi_artikli:
+
+                podaci = a.find_all('td')
+
+                artikal_recnik = {}
+                brojevi = podaci[1].find_all('nobr')
+                broj_1 = ""
+                if len(brojevi) > 1:
+                    broj_1 = brojevi[1].text
+                broj_2 = brojevi[0].text
+                marka = podaci[2].text
+                opis = podaci[4].text
+                opis_2 = podaci[4].find('span')
+                if opis_2 != None:
+                    opis_2 = opis_2.text
+                    opis = opis.replace(opis_2, "")
+                else:
+                    opis_2 = ""
+                kolicina = podaci[6].text
+                if int(kolicina) > 0:
+                    stanje = 'IMA'
+                else:
+                    stanje = 'NEMA'
+                cena = podaci[9].text
+                cena = cena.replace(",", ".")
+                if cena != "":
+                    cena = float(cena)
+                artikal_recnik['marka'] = marka
+                artikal_recnik['opis'] = opis
+                artikal_recnik['opis_2'] = opis_2
+                artikal_recnik['stanje'] = stanje
+                artikal_recnik['cena'] = cena
+                artikal_recnik['kolicina'] = kolicina
+                artikal_recnik['broj_1'] = broj_1
+                artikal_recnik['broj_2'] = broj_2
+                artikli_pretrage.append(artikal_recnik)
+
+        worksheet = book['rvtrade']
+        row_idx = worksheet.max_row + 2
+        worksheet.cell(row=row_idx, column=1).value = _artikal_
+        if artikli_pretrage != []:
+            worksheet.cell(row=row_idx + 1, column=2).value = "SIFRA"
+            worksheet.cell(row=row_idx + 1, column=3).value = "SIFRA_2"
+            worksheet.cell(row=row_idx + 1, column=4).value = "MARKA"
+            worksheet.cell(row=row_idx + 1, column=5).value = "OPIS"
+            worksheet.cell(row=row_idx + 1, column=6).value = "OPIS_2"
+            worksheet.cell(row=row_idx + 1, column=7).value = "STANJE"
+            worksheet.cell(row=row_idx + 1, column=8).value = "KOLICINA"
+            worksheet.cell(row=row_idx + 1, column=9).value = "CENA"
+            row_idx += 2
+            for artikal in artikli_pretrage:
+                worksheet.cell(row=row_idx, column=2).value = artikal["broj_1"]
+                worksheet.cell(row=row_idx, column=3).value = artikal["broj_2"]
+                worksheet.cell(row=row_idx, column=4).value = artikal["marka"]
+                worksheet.cell(row=row_idx, column=5).value = artikal["opis"]
+                worksheet.cell(row=row_idx, column=6).value = artikal["opis_2"]
+                worksheet.cell(row=row_idx, column=7).value = artikal["stanje"]
+                worksheet.cell(row=row_idx, column=8).value = artikal["kolicina"]
+                worksheet.cell(row=row_idx, column=9).value = artikal["cena"]
+
+                row_idx += 1
+
+        else:
+            worksheet.cell(row=row_idx + 1, column=2).value = "Artikal ne postoji u bazi"
+
+            row_idx += 1
+
+        book.save(XLSX_FILE_TEMP)
+        if os.path.exists(XLSX_FILE):
+            os.remove(XLSX_FILE)
+        shutil.copyfile(XLSX_FILE_TEMP, XLSX_FILE)
+        if _artikal_ != artikli_za_pretragu[-1]:
+            print "\nCekam {sekunde} sekundi".format(sekunde=STRING_PAUZA)
+            time.sleep(PAUZA_IZMEDJU_PRETRAGA)
+
     driver.quit()
     print "\nUspesna pretraga!"
