@@ -518,8 +518,15 @@ if rvtrade:
         time.sleep(1)
 
         driver.find_element_by_id("search_button_1").click()
-
-        time.sleep(5)
+        # ucitano = driver.execute_script("return document.readyState")
+        loader = driver.find_element_by_css_selector(".ajax_loader.search_articles_loader")
+        visible = loader.is_displayed()
+        # cekaj dok ucitava tabelu
+        prolaz = 0
+        while visible:
+            time.sleep(1)
+            visible = loader.is_displayed()
+            prolaz += 1
 
         # tabela = driver.find_element_by_id("search_articles_table")
         html = driver.page_source
@@ -528,6 +535,7 @@ if rvtrade:
         uspesna_pretraga = True
 
         tabela = soup.find('table', id="search_articles_table")
+        ucitano = driver.execute_script("return document.readyState")
         if "Nema rezultata za pretragu" not in tabela.text:
             head = tabela.find('thead')
             body = tabela.find('tbody')
