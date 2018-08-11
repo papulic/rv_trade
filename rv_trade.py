@@ -527,6 +527,8 @@ if rvtrade:
             time.sleep(1)
             visible = loader.is_displayed()
             prolaz += 1
+            if prolaz > 60:
+                visible = False
 
         # tabela = driver.find_element_by_id("search_articles_table")
         html = driver.page_source
