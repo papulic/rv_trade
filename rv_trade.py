@@ -185,26 +185,35 @@ if gazela:
                     # sve_cene.append(cena)
                     if cena.is_displayed():
                         modal_ok = False
+                        pokusaj_ucitavanja = 0
                         while not modal_ok:
+                            time.sleep(1)
                             driver.execute_script("arguments[0].click();", cena)
                             time.sleep(2)
-                            driver.switch_to.frame(driver.find_elements_by_class_name("cboxIframe")[0])
-                            time.sleep(1)
-                            master = driver.find_elements_by_id("masterpane")[0]
-                            html_text = master.text
-                            html_cena = master.text.split('\n')
+                            try:
+                                driver.switch_to.frame(driver.find_elements_by_class_name("cboxIframe")[0])
+                                time.sleep(1)
+                                master = driver.find_elements_by_id("masterpane")[0]
+                                html_text = master.text
+                                html_cena = master.text.split('\n')
 
 
-                            if not html_text.startswith("Prilikom obrade pitanja je nastala greska"):
-                                modal_ok = True
-                            if not modal_ok:
-                                driver.switch_to.default_content()
-                                time.sleep(1)
-                                driver.switch_to.frame(driver.find_element_by_id("Main_iframe1"))
-                                time.sleep(1)
-                                element = driver.find_element_by_id('cboxClose')
-                                driver.execute_script("arguments[0].click();", element)
-                                time.sleep(1)
+                                if not html_text.startswith("Prilikom obrade pitanja je nastala greska"):
+                                    modal_ok = True
+                                if not modal_ok:
+                                    driver.switch_to.default_content()
+                                    time.sleep(1)
+                                    driver.switch_to.frame(driver.find_element_by_id("Main_iframe1"))
+                                    time.sleep(1)
+                                    element = driver.find_element_by_id('cboxClose')
+                                    driver.execute_script("arguments[0].click();", element)
+                                    time.sleep(1)
+                            except IndexError:
+                                pokusaj_ucitavanja += 1
+                                if pokusaj_ucitavanja < 10:
+                                    pass
+                                else:
+                                    continue
 
                         if len(html_cena) > 11:
                             artikal_pretraga = html_cena[0]
