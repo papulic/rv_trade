@@ -23,6 +23,9 @@ sys.setdefaultencoding('utf8')
 # cuvanje svih rezultata (stanje u svim magacinima i ostali podaci se cuvaju u tekstualnim fajlovima)
 CUVAJ_SVE = True
 
+DRIVER_CHROME = False
+DRIVER_FIREFOX = True
+
 # pauza je u sekundama!!!
 PAUZA_IZMEDJU_PRETRAGA = 10
 
@@ -102,9 +105,13 @@ if gazela:
     # get the path of ChromeDriverServer
     dir = os.path.dirname(__file__)
     chrome_driver_path = "chromedriver.exe"
+    firefox_driver_path = "geckodriver.exe"
 
     # create a new Chrome session
-    driver = webdriver.Chrome(chrome_driver_path)
+    if DRIVER_CHROME:
+        driver = webdriver.Chrome(chrome_driver_path)
+    elif DRIVER_FIREFOX:
+        driver = webdriver.Firefox()
     driver.implicitly_wait(30)
     # mora full screen , u suprotnom nece naci pretragu !!
     driver.maximize_window()
@@ -323,9 +330,13 @@ if wint:
     # get the path of ChromeDriverServer
     dir = os.path.dirname(__file__)
     chrome_driver_path = "chromedriver.exe"
+    firefox_driver_path = "geckodriver.exe"
 
     # create a new Chrome session
-    driver = webdriver.Chrome(chrome_driver_path)
+    if DRIVER_CHROME:
+        driver = webdriver.Chrome(chrome_driver_path)
+    elif DRIVER_FIREFOX:
+        driver = webdriver.Firefox()
     driver.implicitly_wait(30)
     # mora full screen , u suprotnom nece naci pretragu !!
     driver.maximize_window()
@@ -498,9 +509,13 @@ if rvtrade:
     # get the path of ChromeDriverServer
     dir = os.path.dirname(__file__)
     chrome_driver_path = "chromedriver.exe"
+    firefox_driver_path = "geckodriver.exe"
 
     # create a new Chrome session
-    driver = webdriver.Chrome(chrome_driver_path)
+    if DRIVER_CHROME:
+        driver = webdriver.Chrome(chrome_driver_path)
+    elif DRIVER_FIREFOX:
+        driver = webdriver.Firefox()
     driver.implicitly_wait(30)
     # mora full screen , u suprotnom nece naci pretragu !!
     driver.maximize_window()
