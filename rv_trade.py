@@ -23,11 +23,11 @@ sys.setdefaultencoding('utf8')
 # cuvanje svih rezultata (stanje u svim magacinima i ostali podaci se cuvaju u tekstualnim fajlovima)
 CUVAJ_SVE = True
 
-DRIVER_CHROME = False
-DRIVER_FIREFOX = True
+DRIVER_CHROME = True
+DRIVER_FIREFOX = False
 
 # pauza je u sekundama!!!
-PAUZA_IZMEDJU_PRETRAGA = 10
+PAUZA_IZMEDJU_PRETRAGA = 5
 
 # korisnik za gazelu
 korisnik_gazela = "fiatino"
@@ -532,16 +532,21 @@ if rvtrade:
 
     time.sleep(2)
 
-    for _artikal_ in artikli_za_pretragu:
+    for iteration, _artikal_ in enumerate(artikli_za_pretragu):
         print "Pretrazujem artikal '{0}'...\n".format(_artikal_)
         artikli_pretrage = []
-        searchbox = driver.find_element_by_id("search_pattern")
-        searchbox.clear()
-        # unesi artikal za pretragu
-        searchbox.send_keys(_artikal_)
-        time.sleep(1)
+        try:
+            searchbox = driver.find_element_by_id("search_pattern")
 
-        driver.find_element_by_id("search_button_1").click()
+            searchbox.clear()
+            # unesi artikal za pretragu
+            searchbox.send_keys(_artikal_)
+            time.sleep(1)
+
+            # driver.find_element_by_id("search_button_1").click()
+            searchbox.send_keys(Keys.ENTER)
+        except:
+            pass
         # ucitano = driver.execute_script("return document.readyState")
         loader = driver.find_element_by_css_selector(".ajax_loader.search_articles_loader")
         visible = loader.is_displayed()
