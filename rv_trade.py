@@ -535,18 +535,16 @@ if rvtrade:
     for iteration, _artikal_ in enumerate(artikli_za_pretragu):
         print "Pretrazujem artikal '{0}'...\n".format(_artikal_)
         artikli_pretrage = []
-        try:
-            searchbox = driver.find_element_by_id("search_pattern")
+        searchbox = driver.find_element_by_id("search_pattern")
 
-            searchbox.clear()
-            # unesi artikal za pretragu
-            searchbox.send_keys(_artikal_)
-            time.sleep(1)
+        searchbox.clear()
+        # unesi artikal za pretragu
+        searchbox.send_keys(_artikal_)
+        time.sleep(1)
 
-            # driver.find_element_by_id("search_button_1").click()
-            searchbox.send_keys(Keys.ENTER)
-        except:
-            pass
+        # driver.find_element_by_id("search_button_1").click()
+        searchbox.send_keys(Keys.ENTER)
+
         # ucitano = driver.execute_script("return document.readyState")
         loader = driver.find_element_by_css_selector(".ajax_loader.search_articles_loader")
         visible = loader.is_displayed()
