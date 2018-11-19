@@ -12,6 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
+import random
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -30,7 +31,8 @@ DRIVER_FIREFOX = False
 PAUZA_IZMEDJU_PRETRAGA = 5
 
 # pauza je u minutama
-FILES_PAUSE = 2
+START_TIME = 15
+END_TIME = 70
 
 # korisnik za gazelu
 korisnik_gazela = "fiatino"
@@ -63,6 +65,7 @@ rvtrade = False
 
 sajtovi = []
 FILES_TXT = []
+FILES_PAUSE = random.randrange(START_TIME, END_TIME)
 
 # Provera ispravnosti parametara
 if not len(sys.argv) > 2:
@@ -359,7 +362,7 @@ for artikli_za_pretragu in FILES_TXT:
         username.send_keys(korisnik_wint)
         password.send_keys(lozinka_wint)
 
-        driver.find_element_by_xpath("/html/body/div/div[2]/div/div[2]/form/div/div[3]/button").click()
+        driver.find_element_by_xpath("/html/body/div/div[2]/div/div/form/div/div[3]/button").click()
 
         driver.find_element_by_xpath("/html/body/div[5]/div/img").click()
 
@@ -376,7 +379,8 @@ for artikli_za_pretragu in FILES_TXT:
             trys = 0
             while not nasao_pretragu:
                 try:
-                    driver.find_element_by_xpath('//a[@href="/WagenWebShop/Shop/QuickShop"]').click()
+                    # driver.find_element_by_xpath('//a[@href="/WagenWebShop/Shop/QuickShop"]').click()
+                    driver.find_element_by_xpath('//a[@href="/WagenWebShop/Shop/AdvancedProductSearch"]').click()
                     nasao_pretragu = True
                 except:
                     trys += 1
@@ -390,7 +394,7 @@ for artikli_za_pretragu in FILES_TXT:
 
             time.sleep(2)
 
-            searchbox = driver.find_element_by_id("tbProductNo")
+            searchbox = driver.find_element_by_id("tbNavItemControllNo")
 
             # unesi artikal za pretragu
             searchbox.send_keys(_artikal_)
@@ -400,7 +404,7 @@ for artikli_za_pretragu in FILES_TXT:
 
             time.sleep(3)
 
-            search_tr = driver.find_element_by_id("trResult")
+            search_tr = driver.find_element_by_class_name("logoSection")
 
             uspesna_pretraga = True
 
@@ -426,41 +430,50 @@ for artikli_za_pretragu in FILES_TXT:
             tabela = soup.find('table', id="productsTable")
 
             artikli_pretrage = []
-            head = tabela.find('thead')# .text.split('\n')
-            body = tabela.find('tbody')
-            svi_artikli = body.find_all('tr')
-            for a in svi_artikli:
-                if a.has_attr("id"):
-                    if a.attrs['id'].startswith("trResult"):
-                        continue
-                podaci = a.find_all('td')
-                if len(podaci) < 3:
-                    continue
-                artikal_recnik = {}
-                sifra = podaci[0].text
-                OEbroj = podaci[1].text
-                opis = podaci[2].text
-                brend = podaci[4].text
-                str = podaci[5].text.replace(".", "").replace(",", ".")
-                cena = round(float(str) * 1.111, 2)
+            if tabela != None:
+                head = tabela.find('thead')# .text.split('\n')
+                body = tabela.find('tbody')
+                svi_artikli = body.find_all('tr')
+                prolaz = 1
+                for a in svi_artikli:
+                    if a.has_attr("id"):
+                        if a.attrs['id'].startswith("trResult"):
+                            continue
+                    if a.has_attr("class"):
+                        if prolaz == 1:
+                            podaci = a.find_all('td')
+                            if len(podaci) < 3:
+                                continue
+                            artikal_recnik = {}
+                            sifra = podaci[0].text.replace("\n", "")
+                            OEbroj = podaci[1].text.replace("\n", "")
+                            brend = podaci[2].text.split("\n")[1]
+                            str = podaci[4].text.replace(".", "").replace(",", ".")
+                            cena = round(float(str) * 1.111, 2)
 
-                artikal_recnik['sifra'] = sifra
-                artikal_recnik['OEbroj'] = OEbroj
-                artikal_recnik['opis'] = opis
-                artikal_recnik['brend'] = brend
-                artikal_recnik['cena'] = cena
-                stanje = podaci[6].find('table')
-                nova_stanja = []
-                if stanje is not None:
-                    stanje = stanje.text.split("\n")
+                            artikal_recnik['sifra'] = sifra
+                            artikal_recnik['OEbroj'] = OEbroj
+                            artikal_recnik['brend'] = brend
+                            artikal_recnik['cena'] = cena
+                            stanje = podaci[6].find('table')
+                            nova_stanja = []
+                            if stanje is not None:
+                                stanje = stanje.text.split("\n")
 
-                    for ind, k in enumerate(stanje):
-                        if not k == "" and not k == "Lokacija" and not k == "Stanje":
-                            nova_stanja.append(k)
-                else:
-                    nova_stanja.append("GRESKA")
-                artikal_recnik['stanje'] = nova_stanja
-                artikli_pretrage.append(artikal_recnik)
+                                for ind, k in enumerate(stanje):
+                                    if not k == "" and not k == "Lokacija" and not k == "Stanje":
+                                        nova_stanja.append(k)
+                            else:
+                                nova_stanja.append("GRESKA")
+                            prolaz += 1
+                        else:
+                            podaci = a.find_all('td')
+                            opis = podaci[0].text.replace("Detalji proizvoda\n", "")
+                            artikal_recnik['opis'] = opis
+
+                            artikal_recnik['stanje'] = nova_stanja
+                            artikli_pretrage.append(artikal_recnik)
+                            prolaz = 1
             if artikli_pretrage != []:
                 worksheet = book['wint']
                 row_idx = worksheet.max_row + 2
@@ -509,6 +522,15 @@ for artikli_za_pretragu in FILES_TXT:
                 if os.path.exists(XLSX_FILE):
                     os.remove(XLSX_FILE)
                 shutil.copyfile(XLSX_FILE_TEMP, XLSX_FILE)
+            else:
+                worksheet = book['wint']
+                row_idx = worksheet.max_row + 2
+                worksheet.cell(row=row_idx, column=1).value = _artikal_
+                worksheet.cell(row=row_idx + 1, column=2).value = "Ne postoje proizvodi za trazeni kriterijum"
+                book.save(XLSX_FILE_TEMP)
+                if os.path.exists(XLSX_FILE):
+                    os.remove(XLSX_FILE)
+                shutil.copyfile(XLSX_FILE_TEMP, XLSX_FILE)
             if _artikal_ != artikli_za_pretragu[-1]:
                 print "\nCekam {sekunde} sekundi".format(sekunde=STRING_PAUZA)
                 time.sleep(PAUZA_IZMEDJU_PRETRAGA)
@@ -538,7 +560,7 @@ for artikli_za_pretragu in FILES_TXT:
         username.send_keys(korisnik_rvtrade)
         password.send_keys(lozinka_rvtrade)
 
-        driver.find_element_by_class_name("click_button").click()
+        driver.find_element_by_class_name("moj-btn-sm").click()
 
 
         time.sleep(2)
@@ -557,7 +579,7 @@ for artikli_za_pretragu in FILES_TXT:
             searchbox.send_keys(Keys.ENTER)
 
             # ucitano = driver.execute_script("return document.readyState")
-            loader = driver.find_element_by_css_selector(".ajax_loader.search_articles_loader")
+            loader = driver.find_element_by_class_name("ajax_loader")
             visible = loader.is_displayed()
             # cekaj dok ucitava tabelu
             prolaz = 0
