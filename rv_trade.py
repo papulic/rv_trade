@@ -379,8 +379,8 @@ for artikli_za_pretragu in FILES_TXT:
             trys = 0
             while not nasao_pretragu:
                 try:
-                    # driver.find_element_by_xpath('//a[@href="/WagenWebShop/Shop/QuickShop"]').click()
-                    driver.find_element_by_xpath('//a[@href="/WagenWebShop/Shop/AdvancedProductSearch"]').click()
+                    driver.find_element_by_xpath('//a[@href="/WagenWebShop/Shop/QuickShop"]').click()
+                    # driver.find_element_by_xpath('//a[@href="/WagenWebShop/Shop/AdvancedProductSearch"]').click()
                     nasao_pretragu = True
                 except:
                     trys += 1
@@ -394,7 +394,7 @@ for artikli_za_pretragu in FILES_TXT:
 
             time.sleep(2)
 
-            searchbox = driver.find_element_by_id("tbNavItemControllNo")
+            searchbox = driver.find_element_by_id("tbProductNo")
 
             # unesi artikal za pretragu
             searchbox.send_keys(_artikal_)
@@ -430,50 +430,41 @@ for artikli_za_pretragu in FILES_TXT:
             tabela = soup.find('table', id="productsTable")
 
             artikli_pretrage = []
-            if tabela != None:
-                head = tabela.find('thead')# .text.split('\n')
-                body = tabela.find('tbody')
-                svi_artikli = body.find_all('tr')
-                prolaz = 1
-                for a in svi_artikli:
-                    if a.has_attr("id"):
-                        if a.attrs['id'].startswith("trResult"):
-                            continue
-                    if a.has_attr("class"):
-                        if prolaz == 1:
-                            podaci = a.find_all('td')
-                            if len(podaci) < 3:
-                                continue
-                            artikal_recnik = {}
-                            sifra = podaci[0].text.replace("\n", "")
-                            OEbroj = podaci[1].text.replace("\n", "")
-                            brend = podaci[2].text.split("\n")[1]
-                            str = podaci[4].text.replace(".", "").replace(",", ".")
-                            cena = round(float(str) * 1.111, 2)
+            head = tabela.find('thead')# .text.split('\n')
+            body = tabela.find('tbody')
+            svi_artikli = body.find_all('tr')
+            for a in svi_artikli:
+                if a.has_attr("id"):
+                    if a.attrs['id'].startswith("trResult"):
+                        continue
+                podaci = a.find_all('td')
+                if len(podaci) < 3:
+                    continue
+                artikal_recnik = {}
+                sifra = podaci[0].text
+                OEbroj = podaci[1].text
+                opis = podaci[2].text
+                brend = podaci[4].text
+                str = podaci[5].text.replace(".", "").replace(",", ".")
+                cena = round(float(str) * 1.111, 2)
 
-                            artikal_recnik['sifra'] = sifra
-                            artikal_recnik['OEbroj'] = OEbroj
-                            artikal_recnik['brend'] = brend
-                            artikal_recnik['cena'] = cena
-                            stanje = podaci[6].find('table')
-                            nova_stanja = []
-                            if stanje is not None:
-                                stanje = stanje.text.split("\n")
+                artikal_recnik['sifra'] = sifra
+                artikal_recnik['OEbroj'] = OEbroj
+                artikal_recnik['opis'] = opis
+                artikal_recnik['brend'] = brend
+                artikal_recnik['cena'] = cena
+                stanje = podaci[6].find('table')
+                nova_stanja = []
+                if stanje is not None:
+                    stanje = stanje.text.split("\n")
 
-                                for ind, k in enumerate(stanje):
-                                    if not k == "" and not k == "Lokacija" and not k == "Stanje":
-                                        nova_stanja.append(k)
-                            else:
-                                nova_stanja.append("GRESKA")
-                            prolaz += 1
-                        else:
-                            podaci = a.find_all('td')
-                            opis = podaci[0].text.replace("Detalji proizvoda\n", "")
-                            artikal_recnik['opis'] = opis
-
-                            artikal_recnik['stanje'] = nova_stanja
-                            artikli_pretrage.append(artikal_recnik)
-                            prolaz = 1
+                    for ind, k in enumerate(stanje):
+                        if not k == "" and not k == "Lokacija" and not k == "Stanje":
+                            nova_stanja.append(k)
+                else:
+                    nova_stanja.append("GRESKA")
+                artikal_recnik['stanje'] = nova_stanja
+                artikli_pretrage.append(artikal_recnik)
             if artikli_pretrage != []:
                 worksheet = book['wint']
                 row_idx = worksheet.max_row + 2
